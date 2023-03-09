@@ -145,10 +145,10 @@ contract StakingPool is Ownable {
         uint256 rewardsPerTokenStaked = stakingDuration
         .div(timeUnit) // 保证不足timeUnit的部分不计算奖励
         .mul(rewardRatioNumerator)
-        .mul(rewardsToken.decimals()) // 即保证计算精度又保证计算的结果符合rewardsToken的精度
+        .mul(1e18) // 即保证计算精度又保证计算的结果符合rewardsToken的精度
         .div(rewardRatioDenominator);
         // 按照质押总量计算出奖励
-        return rewardsPerTokenStaked.mul(_balances[account]).div(rewardsToken.decimals());
+        return rewardsPerTokenStaked.mul(_balances[account]).div(1e18);
     }
 
     /* ========== MODIFIERS ========== */
@@ -172,12 +172,12 @@ contract StakingPool is Ownable {
 
     /* ========== EVENTS ========== */
 
-     event TokensStaked(address from, uint256 amount);
-     event TokensWithdrawn(address user, uint256 ethAmount);
-     event RewardsClaimed(address user, uint256 amount);
-     event UpdatedTimeUnit(uint256 preTimeUnit, uint256 postTimeUnit);
-     event UpdatedRewardRatio(uint256 preRewardRatioNumerator, uint256 preRewardRatioDenominator, uint256 postRewardRatioNumerator, uint256 postRewardRatioDenominator);
-     event UpdatedMinStakeAmount(uint256 preMinStakeAmount, uint256 postMinStakeAmount);
+    event TokensStaked(address from, uint256 amount);
+    event TokensWithdrawn(address user, uint256 ethAmount);
+    event RewardsClaimed(address user, uint256 amount);
+    event UpdatedTimeUnit(uint256 preTimeUnit, uint256 postTimeUnit);
+    event UpdatedRewardRatio(uint256 preRewardRatioNumerator, uint256 preRewardRatioDenominator, uint256 postRewardRatioNumerator, uint256 postRewardRatioDenominator);
+    event UpdatedMinStakeAmount(uint256 preMinStakeAmount, uint256 postMinStakeAmount);
     event UpdateReward(address account, uint256 preRewards, uint256 postRewards);
 
     // fallback
