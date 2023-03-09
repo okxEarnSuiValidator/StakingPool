@@ -86,11 +86,11 @@ contract StakingPool is Ownable {
     /* ========== User function ========== */
 
     // getStakeInfo: 查看用户可获得的代币数量和总奖励
-    function getStakeInfo(address account) public updateReward(account) returns (StakeInfo memory stakeInfo) {
+    function getStakeInfo(address account) public view returns (StakeInfo memory stakeInfo) {
         require(account != address(0), "GetStakeInfo Error: account is 0x0");
 
         stakeInfo.balance = _balances[account];
-        stakeInfo.rewards = _rewards[account];
+        stakeInfo.rewards = _rewards[account].add(calculateRewards(account));
     }
     // claimRewards: 获取累积奖励，这种领取方法允许采用拉式机制，用户必须发起奖励领取
     function claimRewards(address account) public updateReward(account) {
@@ -114,7 +114,7 @@ contract StakingPool is Ownable {
     }
     // stake: 用户通过传入数量来质押多少个代币 // msg.sender
     function stake(address from) public updateReward(from) payable {
-        require(msg.value >= minStakeAmount, "Stake Error: msg.value is 0 Ether");
+        require(msg.value >= minStakeAmount, "Stake Error: msg.value < minStakeAmount");
 
         _balances[from] = _balances[from].add(msg.value);
 
@@ -128,33 +128,41 @@ contract StakingPool is Ownable {
     }
 
     // 查询用户的奖励余额
-    function rewardsBalance(address account) public updateReward(account) returns (uint256) {
+    function rewardsBalance(address account) public view returns (uint256) {
         require(account != address(0), "RewardsBalance Error: account is 0x0");
-        return _rewards[account];
+        return _rewards[account].add(calculateRewards(account));
+    }
+    /*
+    * 计算奖励
+    * 1. 更新奖励时
+    * 2. 查询奖励时
+    */
+    function calculateRewards(address account) private view returns (uint256) {
+        if (_lastTime[account] == 0) {
+            return 0;
+        }
+        uint256 stakingDuration = block.timestamp - _lastTime[account];
+        uint256 rewardsPerTokenStaked = stakingDuration
+        .div(timeUnit) // 保证不足timeUnit的部分不计算奖励
+        .mul(rewardRatioNumerator)
+        .mul(rewardsToken.decimals()) // 即保证计算精度又保证计算的结果符合rewardsToken的精度
+        .div(rewardRatioDenominator);
+        // 按照质押总量计算出奖励
+        return rewardsPerTokenStaked.mul(_balances[account]).div(rewardsToken.decimals());
     }
 
     /* ========== MODIFIERS ========== */
 
     /*
     * 按照时间和质押量更新奖励
-    * 更新时机：stake、withdraw、claimRewards、getStakeInfo、rewardsBalance
+    * 更新时机：stake、withdraw、claimRewards
     * 指导思想：a. 用户质押总量发送变化时(stake：总量变多、withdraw：总量减少)，需要更新奖励；
     *         b. 用户提取奖励时，需要更新后再提取；
-    *         c. 查询质押信息时，需要给出当前实时奖励数据，需要更新后给出。
     */
     modifier updateReward(address account) {
-        if (_lastTime[account] == 0) {
-            _lastTime[account] = block.timestamp;
-        }
-
-        uint256 stakingDuration = block.timestamp - _lastTime[account];
-        uint256 rewardsPerTokenStaked = stakingDuration
-                                        .div(timeUnit) // 保证不足timeUnit的部分不计算奖励
-                                        .mul(rewardRatioNumerator)
-                                        .mul(rewardsToken.decimals()) // 即保证计算精度又保证计算的结果符合rewardsToken的精度
-                                        .div(rewardRatioDenominator);
-        // 按照质押总量计算出奖励
-        uint256 rewards = rewardsPerTokenStaked.mul(_balances[account]).div(rewardsToken.decimals());
+        // 计算出奖励
+        uint256 rewards = calculateRewards(account);
+        emit UpdateReward(account, _rewards[account], _rewards[account].add(rewards));
         // 更新用户奖励
         _rewards[account] = _rewards[account].add(rewards);
         // 更新下次计算奖励的开始时间为当前时间
@@ -170,6 +178,7 @@ contract StakingPool is Ownable {
      event UpdatedTimeUnit(uint256 preTimeUnit, uint256 postTimeUnit);
      event UpdatedRewardRatio(uint256 preRewardRatioNumerator, uint256 preRewardRatioDenominator, uint256 postRewardRatioNumerator, uint256 postRewardRatioDenominator);
      event UpdatedMinStakeAmount(uint256 preMinStakeAmount, uint256 postMinStakeAmount);
+    event UpdateReward(address account, uint256 preRewards, uint256 postRewards);
 
     // fallback
     receive() external payable {
