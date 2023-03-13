@@ -6,6 +6,7 @@ describe("LPEth contract", function () {
 
     let LPEth;
     let stakingPool;
+    let testContract;
     let owner;
     let addr1;
     let addr2;
@@ -26,6 +27,11 @@ describe("LPEth contract", function () {
         await stakingPool.init(LPEth.address);
 
         console.log("deploy success");
+
+        const testFactory = await hre.ethers.getContractFactory("Test");
+        testContract = await testFactory.deploy();
+        console.log("deploy testContract success");
+
 
         [owner, addr1, addr2, addrs] = await ethers.getSigners();
     });
@@ -63,6 +69,9 @@ describe("LPEth contract", function () {
             console.log(stakeInfo);
         });
 
+        it('testContract', async function() {
+            await testContract.f1(24);
+        });
 
 
     });
