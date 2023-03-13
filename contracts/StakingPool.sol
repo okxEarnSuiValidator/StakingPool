@@ -112,13 +112,17 @@ contract StakingPool is Ownable {
 
         emit TokensWithdrawn(account, ethAmount);
     }
-    // stake: 用户通过传入数量来质押多少个代币 // msg.sender
+    // stake: 用户通过传入数量来质押多少个代币
     function stake(address from) public updateReward(from) payable {
         require(msg.value >= minStakeAmount, "Stake Error: msg.value < minStakeAmount");
 
         _balances[from] = _balances[from].add(msg.value);
 
         emit TokensStaked(from, msg.value);
+    }
+    // stake: 用户通过传入数量来质押多少个代币 （msg.sender）
+    function stake() public payable {
+        stake(msg.sender);
     }
 
     // 查询用户已经质押的总量
@@ -172,13 +176,13 @@ contract StakingPool is Ownable {
 
     /* ========== EVENTS ========== */
 
-    event TokensStaked(address from, uint256 amount);
-    event TokensWithdrawn(address user, uint256 ethAmount);
-    event RewardsClaimed(address user, uint256 amount);
+    event TokensStaked(address indexed from, uint256 amount);
+    event TokensWithdrawn(address indexed user, uint256 ethAmount);
+    event RewardsClaimed(address indexed user, uint256 amount);
     event UpdatedTimeUnit(uint256 preTimeUnit, uint256 postTimeUnit);
     event UpdatedRewardRatio(uint256 preRewardRatioNumerator, uint256 preRewardRatioDenominator, uint256 postRewardRatioNumerator, uint256 postRewardRatioDenominator);
     event UpdatedMinStakeAmount(uint256 preMinStakeAmount, uint256 postMinStakeAmount);
-    event UpdateReward(address account, uint256 preRewards, uint256 postRewards);
+    event UpdateReward(address indexed account, uint256 preRewards, uint256 postRewards);
 
     // fallback
     receive() external payable {
